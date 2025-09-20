@@ -2,24 +2,37 @@ name: Extract Air Quality JSON
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    paths:
+      - "Air Quality Data-VMC.pdf"
+  workflow_dispatch:   # allow manual trigger
 
 jobs:
   extract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          python-version: "3.10"
+          persist-credentials: true  # needed to push changes
+          fetch-depth: 0
+          
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          
       - name: Install dependencies
-        run: pip install pdfplumber pandas
-      - name: Run extraction
+        run: |
+          python -m pip install --upgrade pip
+          pip install pdfplumber pandas
+        
+      - name: Run extraction script
         run: python parse.py
-      - name: Upload JSON artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: air-quality-data
-          path: air_quality_data.json
+
+      - name: Commit JSON back to repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add air_quality_data.json
+          git commit -m "chore: update air_quality_data.json from PDF [skip ci]" || echo "No changes to commit"
+          git push
